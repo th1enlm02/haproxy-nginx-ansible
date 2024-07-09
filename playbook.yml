@@ -1,0 +1,153 @@
+- hosts: webservers
+  become: yes
+  tasks:
+    - name: Update APT package index
+      apt:
+        update_cache: yes
+
+    - name: Installing Nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Install software-properties-common
+      apt:
+        name: software-properties-common
+        state: present
+
+    - name: Install net-tools
+      apt:
+        name: net-tools
+        state: present
+
+    - name : Install curl
+      shell: sudo apt install curl -y
+
+    - name : Delete default Nginx configuration
+      shell: sudo rm -rf /etc/nginx/sites-available/* && sudo rm -rf /etc/nginx/sites-enabled/*
+
+    - name: Copy configuration file
+      template:
+        src: /home/th1enlm02/intern/atom-solution/haproxy-nginx-ansible/atom-demo
+        dest: /etc/nginx/sites-available/atom-demo
+
+    - name : Create symbolic link
+      shell:  sudo ln -s /etc/nginx/sites-available/atom-demo /etc/nginx/sites-enabled/
+
+    - name: Install docker
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Install docker compose
+      apt:
+        name: docker-compose
+        state: present
+
+    - name: Install gitlab-runner
+      shell: sudo curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64" && sudo chmod +x /usr/local/bin/gitlab-runner
+
+    - name: Start Nginx web server
+      service:
+        name: nginx
+        state: started
+
+- hosts: HAProxy
+  become: yes
+  tasks:
+    - name: Update APT package index
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+        force_apt_get: yes
+
+    - name: Install software-properties-common
+      apt:
+        name: software-properties-common
+        state: present
+
+    - name: Install Python3
+      apt:
+        name: python3
+        state: present
+
+    - name: Add Certbot PPA
+      shell: apt-add-repository -y -r ppa:certbot/certbot
+
+    - name: Update APT package index
+      apt:
+        update_cache: yes
+
+    - name: Install Certbot
+      apt:
+        name: certbot
+        state: present
+
+    - name: Install Python3 Certbot Nginx
+      apt:
+        name: python3-certbot-nginx
+        state: present
+
+    - name: Install net-tools
+      apt:
+        name: net-tools
+        state: present
+
+    - name: Install HAProxy
+      apt:
+        name: haproxy
+        state: present
+
+    - name: Stop HAProxy service
+      service:
+        name: haproxy
+        state: stopped
+
+    - name: Stop processes using port 80
+      shell: "sudo kill -9 $(sudo lsof -t -i:80)"
+      ignore_errors: yes
+
+    - name: Obtain SSL certificate
+      command: >
+        certbot certonly --standalone --preferred-challenges http --http-01-port 80
+        -d trild.id.vn
+        -d www.trild.id.vn
+        --non-interactive --agree-tos --email thienluu2406@gmail.com
+      register: certbot_output
+
+    - name: Debug Certbot output
+      debug:
+        var: certbot_output.stdout
+
+    - name: Create HAProxy certs directory
+      file:
+        path: /etc/haproxy/certs
+        state: directory
+        mode: 0700
+
+    - name: Concatenate fullchain.pem and privkey.pem into DOMAIN.pem
+      shell: |
+        DOMAIN='trild.id.vn'
+        cat /etc/letsencrypt/live/$DOMAIN/fullchain.pem /etc/letsencrypt/live/$DOMAIN/privkey.pem > /etc/haproxy/certs/$DOMAIN.pem
+      args:
+        executable: /bin/bash
+        creates: /etc/haproxy/certs/trild.id.vn.pem
+
+    - name: Set permissions on HAProxy certs directory
+      file:
+        path: /etc/haproxy/certs
+        mode: '0700'
+        recurse: yes
+        owner: root
+        group: root
+
+    - name: Copy configuration file for HAProxy
+      template:
+        src: newhaproxy.cfg
+        dest: /etc/haproxy/haproxy.cfg
+        force: yes
+
+    - name: Start HAProxy service
+      service:
+        name: haproxy
+        state: restarted

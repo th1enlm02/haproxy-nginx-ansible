@@ -1,0 +1,7 @@
+[HAProxy]
+54.169.204.187 ansible_ssh_user=ubuntu ansible_ssh_private_key_file=/home/th1enlm02/intern/atom-solution/haproxy-nginx-ansible/atom-key.pem ansible_connection=ssh ansible_become=yes
+
+[webservers]
+46.137.231.137 ansible_ssh_user=ubuntu ansible_ssh_private_key_file=/home/th1enlm02/intern/atom-solution/haproxy-nginx-ansible/atom-key.pem ansible_connection=ssh ansible_become=yes
+13.250.118.170 ansible_ssh_user=ubuntu ansible_ssh_private_key_file=/home/th1enlm02/intern/atom-solution/haproxy-nginx-ansible/atom-key.pem ansible_connection=ssh ansible_become=yes
+

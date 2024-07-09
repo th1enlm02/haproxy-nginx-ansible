@@ -1,0 +1,11 @@
+# HAproxy
+haproxy -f <file.cfg>
+
+# Nginx
+
+# Ansible
+ansible-playbook -i <inventory> <playbook.yml>
+- ping:
+ansible all -i <inventory> -m ping
+ansible <hosts_name> -i <inventory> -m ping
+ansible <ip_address> -t <inventory> -m ping
